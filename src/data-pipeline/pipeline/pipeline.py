@@ -33,6 +33,7 @@ class Pipeline:
         categorical_cols = ["dep_code", "reg_code", "code_postal"]
 
         numeric_cols = [
+            "taux_inflation",
             "annee",
             "population",
             "superficie_km2",
