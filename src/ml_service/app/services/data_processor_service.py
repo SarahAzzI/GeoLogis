@@ -11,8 +11,8 @@ from pathlib import Path
 # Add data-pipeline to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "data-pipeline"))
 
-from transform.cleaning import DataCleaner
-from transform.normalization import DataNormalizer
+from data_pipeline.transform.cleaning import DataCleaner
+from data_pipeline.transform.normalization import DataNormalizer
 
 logger = logging.getLogger(__name__)
 

@@ -12,7 +12,7 @@ class InflationRateService:
 
     def __init__(self):
         self.repo = InflationRateRepository(db=next(self._get_db()))
-        self.data_path = Path(__file__).parent.parent.parent.parent / "flatfiles"
+        self.data_path = Path(__file__).parent.parent.parent.parent / "flatfiles" / "taux_inflation.csv"
 
     @staticmethod
     def _get_db():
@@ -49,7 +49,7 @@ class InflationRateService:
     def sync_from_csv(self, file_path: Optional[str] = None, replace: bool = False) -> dict:
         """Sync inflation rate data from CSV file to database."""
         if file_path is None:
-            file_path = str(self.data_path / "inflation_rates.csv")
+            file_path = str(self.data_path / "taux_inflation.csv")
         
         try:
             # Load and validate

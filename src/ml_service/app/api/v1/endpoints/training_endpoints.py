@@ -196,10 +196,10 @@ async def load_communes_training_data(db: Session = Depends(get_db)):
 async def load_inflation_training_data(db: Session = Depends(get_db)):
     """Load inflation rate training data from CSV."""
     repo = InflationRateRepository(db=db)
-    csv_file = BASE_DIR / "taux_inflation.csv"
+    csv_file = BASE_DIR.parent.parent.parent.parent / "flatfiles" / "taux_inflation.csv"
     
     if not csv_file.exists():
-        csv_file = BASE_DIR.parent.parent / "flatfiles" / "taux_inflation.csv"
+        csv_file = BASE_DIR.parent.parent.parent / "flatfiles" / "taux_inflation.csv"
     
     if not csv_file.exists():
         logger.error("Inflation rates CSV not found in either location")
