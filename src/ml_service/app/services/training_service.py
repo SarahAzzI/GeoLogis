@@ -24,7 +24,10 @@ def convert_commune_row(row_dict: dict) -> dict:
     string_fields = ["code_postal", "dep_code", "reg_code", "zone_emploi"]
     for field in string_fields:
         if field in row_dict and row_dict[field] is not None:
-            row_dict[field] = str(int(row_dict[field])) if isinstance(row_dict[field], float) else str(row_dict[field])
+            try:
+                row_dict[field] = str(int(float(row_dict[field])))
+            except (ValueError, TypeError):
+                row_dict[field] = str(row_dict[field])
     
     # Ensure numeric fields are proper types
     if "annee" in row_dict and row_dict["annee"] is not None:

@@ -12,7 +12,7 @@ class CommuneService:
 
     def __init__(self):
         self.repo = CommuneRepository(db=next(self._get_db()))
-        self.data_path = Path(__file__).parent.parent.parent.parent / "flatfiles"
+        self.data_path = Path(__file__).parent.parent.parent.parent / "flatfiles" / "commune_france" / "communes_france_2025.csv"
 
     @staticmethod
     def _get_db():
@@ -67,7 +67,7 @@ class CommuneService:
     def sync_from_csv(self, file_path: Optional[str] = None, replace: bool = False) -> dict:
         """Sync commune data from CSV file to database."""
         if file_path is None:
-            file_path = str(self.data_path / "communes.csv")
+            file_path = str(self.data_path / "communes_france_2025.csv")
         
         try:
             # Load and validate

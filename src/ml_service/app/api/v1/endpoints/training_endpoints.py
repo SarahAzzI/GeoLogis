@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/training", tags=["training"])
 
 # Base data directory
-BASE_DIR = Path(__file__).parent.parent.parent.parent.parent.parent / "data-pipeline" / "merge" / "raw"
+BASE_DIR = Path(__file__).parent.parent.parent.parent.parent.parent / "data_pipeline" / "merge" / "raw"
 
 @router.get("/", description="Get all training data")
 async def get_training_data(db: Session = Depends(get_db)):
@@ -314,14 +314,6 @@ async def get_training_record_count(db: Session = Depends(get_db)):
     service = get_training_service(db)
     count = service.repo.count_records()
     return {"total_records": count}
-
-
-@router.delete("/clear/{annee}")
-async def clear_training_by_year(annee: int, db: Session = Depends(get_db)):
-    """Delete all training records for a specific year."""
-    service = get_training_service(db)
-    count = service.repo.clear_by_year(annee)
-    return {"status": "success", "records_deleted": count}
 
 
 @router.post("/process/split")
