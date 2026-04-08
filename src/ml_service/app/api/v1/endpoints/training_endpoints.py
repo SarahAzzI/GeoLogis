@@ -15,7 +15,7 @@ from ....services.training_service import (
 from ....repositories.real_estate_repository import RealEstateMktRepository
 from ....repositories.communes_repository import CommuneRepository
 from ....repositories.inflation_rate_repository import InflationRateRepository
-from ....schemas.training_schema import TrainingReadSchema
+from ....schemas.training_schema import TrainingReadSchema, TrainingCreateSchema
 from ....schemas.real_estate_schema import RealEstateMktCreateSchema
 from ....schemas.communes_schema import CommuneCreateSchema
 from ....schemas.inflation_rate_schema import InflationRateCreateSchema
