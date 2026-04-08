@@ -16,7 +16,12 @@ class InflationRateService:
 
     @staticmethod
     def _get_db():
-        """Get database session."""
+        """
+        Get database session. This is a generator that yields a database session and ensures it is closed after use.
+        
+        Yields:
+            Database session for performing operations
+        """
         from ..model.database import SessionLocal
         db = SessionLocal()
         try:
@@ -25,7 +30,16 @@ class InflationRateService:
             db.close()
 
     def load_csv(self, file_path: str) -> pd.DataFrame:
-        """Load CSV file and return DataFrame."""
+        """
+        Load CSV file and return DataFrame.
+
+        Args:
+            file_path: Path to the CSV file containing inflation rate data.
+
+        Returns:
+            DataFrame with the loaded data. If the file is not found or cannot be read, an empty DataFrame is returned.
+
+        """
         try:
             return pd.read_csv(file_path, dtype={"annee": int})
         except FileNotFoundError:
@@ -34,7 +48,17 @@ class InflationRateService:
             return pd.DataFrame()
 
     def validate_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Validate and clean inflation rate data."""
+        """
+        Validate and clean inflation rate data. This includes:
+        - Dropping rows with missing required fields (annee, taux_inflation)
+        - Converting data types to correct formats
+        - Filling missing values with defaults if necessary
+
+        Args:
+            df: DataFrame to validate
+        Returns:
+            Cleaned and validated DataFrame
+        """
         required_columns = ["annee", "taux_inflation"]
         
         df = df.dropna(subset=required_columns)
@@ -47,7 +71,18 @@ class InflationRateService:
         return df
 
     def sync_from_csv(self, file_path: Optional[str] = None, replace: bool = False) -> dict:
-        """Sync inflation rate data from CSV file to database."""
+        """
+        Sync inflation rate data from CSV file to database. 
+        This includes loading the data, validating it, and then inserting it into the database. 
+        
+        If the replace flag is set, existing data will be cleared before inserting new records.
+
+        Args:
+            file_path: Optional path to the CSV file. If None, defaults to "flatfiles/inflation_rates.csv"
+            replace: Whether to replace existing records in the database
+        Returns:
+            Dictionary with sync status and number of records synced
+        """
         if file_path is None:
             file_path = str(self.data_path / "inflation_rates.csv")
         
@@ -85,7 +120,17 @@ class InflationRateService:
             return {"error": str(e), "records_synced": 0}
 
     def get_average_inflation(self, annee_start: int, annee_end: int) -> dict:
-        """Get average inflation for a period."""
+        """
+        Get average inflation for a period. This calculates the average inflation rate between the specified start and end years.
+
+        Args:
+            annee_start: Starting year of the period (inclusive)
+            annee_end: Ending year of the period (inclusive)
+
+        Returns:
+            Dictionary with the average inflation rate for the specified period or an error message if something goes wrong
+
+        """
         try:
             average = self.repo.get_average_inflation(annee_start, annee_end)
             return {
@@ -97,7 +142,15 @@ class InflationRateService:
             return {"error": str(e)}
 
     def get_inflation_by_year(self, annee: int) -> dict:
-        """Get inflation rate for a specific year."""
+        """
+        Get inflation rate for a specific year. This retrieves the inflation rate for the specified year from the database.
+
+        Args:
+            annee: Year for which to retrieve the inflation rate
+
+        Returns:
+            Dictionary with the inflation rate for the specified year or an error message if no data is found
+        """
         try:
             record = self.repo.get_by_year(annee)
             if not record:

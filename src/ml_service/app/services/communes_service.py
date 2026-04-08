@@ -25,7 +25,22 @@ class CommuneService:
             db.close()
 
     def load_csv(self, file_path: str) -> pd.DataFrame:
-        """Load CSV file and return DataFrame."""
+        """
+        Load commune data from a CSV file. The CSV is expected to have columns like:
+        - code_insee
+        - dep_code
+        - reg_code
+        - code_postal
+        - zone_emploi
+
+        If the file is not found or cannot be read, an empty DataFrame is returned. 
+        The code_insee column is treated as a string to preserve leading zeros and support Corsican codes (2A, 2B).
+
+        Args:
+            file_path: Path to the CSV file
+        Returns:
+            DataFrame with commune data
+        """
         try:
             return pd.read_csv(
                 file_path,
@@ -44,7 +59,21 @@ class CommuneService:
             return pd.DataFrame()
 
     def validate_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Validate and clean commune data."""
+        """
+        Validate and clean commune data. This includes:
+        - Dropping unnecessary columns
+        - Removing rows with bad department codes (2A, 2B)
+        - Handling missing values in critical columns (code_insee, nom_standard, annee)
+        - Standardizing data types (code_insee as string, annee as int)
+
+        If critical columns are missing or empty after validation, an empty DataFrame is returned.
+
+        Args:
+            df: Input DataFrame to validate
+        Returns:
+            Validated and cleaned DataFrame
+        """
+
         required_columns = ["code_insee", "nom_standard", "annee"]
         
         df = df.dropna(subset=required_columns)
@@ -65,7 +94,18 @@ class CommuneService:
         return df
 
     def sync_from_csv(self, file_path: Optional[str] = None, replace: bool = False) -> dict:
-        """Sync commune data from CSV file to database."""
+        """
+        Sync commune data from CSV file to database. 
+
+        If replace is True, existing commune records will be deleted before inserting new ones.
+
+        Args:
+            file_path: Optional path to the CSV file. If None, defaults to "flatfiles/communes.csv"
+            replace: Whether to replace existing records in the database
+
+        Returns:
+            Dictionary with sync status and number of records synced
+        """
         if file_path is None:
             file_path = str(self.data_path / "communes.csv")
         
@@ -103,14 +143,31 @@ class CommuneService:
             return {"error": str(e), "records_synced": 0}
 
     def get_department_statistics(self, dep_code: str, annee: int) -> dict:
-        """Get department statistics for a year."""
+        """
+        Get department statistics for a year. This includes count of communes and average population density for the specified department and year.
+        
+        Args:
+            dep_code: Department code (e.g., "75" for Paris)
+            annee: Year for which to get statistics (e.g., 2020)
+        Returns:
+            Dictionary with department statistics or error message
+        """
         try:
             return self.repo.get_department_stats(dep_code, annee)
         except Exception as e:
             return {"error": str(e)}
 
     def get_communes_by_department(self, dep_code: str) -> dict:
-        """Get all communes in a department."""
+        """
+        Get all communes in a department. Returns a list of commune names for the specified department code.
+
+        Args:
+            dep_code: Department code (e.g., "75" for Paris)
+            count: Number of communes in the department
+            communes: List of commune names in the department
+        Returns:
+            Dictionary with count of communes and list of commune names or error message
+        """
         try:
             communes = self.repo.get_by_department(dep_code)
             return {

@@ -18,23 +18,62 @@ class InflationRateRepository:
         self.db = db
 
     def get_all(self) -> List[InflationRate]:
-        """Get all inflation rate records."""
+        """
+        Retrieve all inflation rate records ordered by year ascending.
+
+        This method queries the entire InflationRate table without filtering
+        and returns results sorted from the earliest to the most recent year.
+
+        Returns:
+            List of all InflationRate records ordered by year ascending.
+        """
         return self.db.query(InflationRate).order_by(InflationRate.annee).all()
 
     def get_by_id(self, record_id: int) -> Optional[InflationRate]:
-        """Get a record by ID."""
+        """
+        Retrieve a single inflation rate record by its primary key.
+
+        This method filters the InflationRate table by the given ID and returns
+        the first matching record, or None if no match is found.
+
+        Args:
+            record_id: The integer primary key of the inflation rate record to retrieve.
+        Returns:
+            The matching InflationRate record, or None if not found.
+        """
         return self.db.query(InflationRate).filter(
             InflationRate.id == record_id
         ).first()
 
     def get_by_year(self, annee: int) -> Optional[InflationRate]:
-        """Get inflation rate for a specific year."""
+        """
+        Retrieve the inflation rate record for a specific year.
+
+        This method filters the InflationRate table by the given year and returns
+        the first matching record, or None if no record exists for that year.
+
+        Args:
+            annee: The integer year to retrieve the inflation rate for.
+        Returns:
+            The matching InflationRate record, or None if not found.
+        """
         return self.db.query(InflationRate).filter(
             InflationRate.annee == annee
         ).first()
 
     def get_year_range(self, annee_start: int, annee_end: int) -> List[InflationRate]:
-        """Get inflation rates for a range of years."""
+        """
+        Retrieve all inflation rate records within an inclusive year range.
+
+        This method applies a compound filter to select records whose year falls
+        between annee_start and annee_end, and returns them ordered by year ascending.
+
+        Args:
+            annee_start: The integer start year of the range (inclusive).
+            annee_end: The integer end year of the range (inclusive).
+        Returns:
+            List of InflationRate records within the specified year range, ordered by year ascending.
+        """
         return self.db.query(InflationRate).filter(
             and_(
                 InflationRate.annee >= annee_start,
@@ -43,7 +82,20 @@ class InflationRateRepository:
         ).order_by(InflationRate.annee).all()
 
     def get_average_inflation(self, annee_start: int, annee_end: int) -> float:
-        """Get average inflation rate for a period."""
+        """
+        Compute the average inflation rate over an inclusive year range.
+
+        This method issues an aggregate AVG query scoped to the given year range.
+        The result is rounded to four decimal places before being returned.
+        If no records are found for the period, 0.0 is returned.
+
+        Args:
+            annee_start: The integer start year of the period (inclusive).
+            annee_end: The integer end year of the period (inclusive).
+        Returns:
+            The average inflation rate as a float rounded to 4 decimal places,
+            or 0.0 if no records exist for the period.
+        """
         result = self.db.query(
             func.avg(InflationRate.taux_inflation).label("avg_taux")
         ).filter(
@@ -56,7 +108,21 @@ class InflationRateRepository:
         return round(float(result.avg_taux), 4) if result.avg_taux else 0.0
 
     def create_bulk(self, schemas: List[InflationRateCreateSchema]) -> int:
-        """Bulk insert multiple inflation rate records from schemas."""
+        """
+        Bulk insert multiple inflation rate records from a list of schemas.
+
+        This method iterates over the provided schemas to construct InflationRate
+        ORM objects, casting fields to their expected types and defaulting optional
+        fields to None where absent. All records are added to the session in a
+        single batch and committed together.
+        If any error occurs during the process, the transaction is rolled back,
+        an error is logged, and 0 is returned.
+
+        Args:
+            schemas: List of InflationRateCreateSchema instances representing the records to insert.
+        Returns:
+            The number of successfully inserted records, or 0 if the operation failed.
+        """
         try:
             records = [
                 InflationRate(
@@ -76,7 +142,20 @@ class InflationRateRepository:
             return 0
 
     def add_single(self, schema: InflationRateCreateSchema) -> Optional[InflationRate]:
-        """Add a single inflation rate record."""
+        """
+        Add a single inflation rate record to the database.
+
+        This method constructs an InflationRate ORM object from the provided schema,
+        adds it to the session, and commits the transaction. The record is then
+        refreshed to reflect any database-generated values.
+        If any error occurs, the transaction is rolled back, an error is logged,
+        and None is returned.
+
+        Args:
+            schema: An InflationRateCreateSchema instance containing the data for the new record.
+        Returns:
+            The newly created and refreshed InflationRate record, or None if the operation failed.
+        """
         try:
             record = InflationRate(**schema.model_dump())
             self.db.add(record)
@@ -90,7 +169,20 @@ class InflationRateRepository:
             return None
 
     def update(self, record_id: int, data: dict) -> Optional[InflationRate]:
-        """Update an inflation rate record."""
+        """
+        Update an existing inflation rate record with new field values.
+
+        This method retrieves the record by ID, then iterates over the provided
+        data dictionary to set each valid attribute on the ORM object. The session
+        is committed and the record refreshed after the update.
+        If the record is not found, no changes are made and None is returned.
+
+        Args:
+            record_id: The integer primary key of the inflation rate record to update.
+            data: A dictionary mapping field names to their new values.
+        Returns:
+            The updated and refreshed InflationRate record, or None if the record was not found.
+        """
         record = self.db.query(InflationRate).filter(InflationRate.id == record_id).first()
         if record:
             for key, value in data.items():
@@ -102,7 +194,18 @@ class InflationRateRepository:
         return record
 
     def delete(self, record_id: int) -> bool:
-        """Delete an inflation rate record by ID."""
+        """
+        Delete a single inflation rate record by its primary key.
+
+        This method retrieves the record by ID and, if found, deletes it and
+        commits the transaction. If the record does not exist, a warning is
+        logged and False is returned.
+
+        Args:
+            record_id: The integer primary key of the inflation rate record to delete.
+        Returns:
+            True if the record was found and deleted, False otherwise.
+        """
         record = self.db.query(InflationRate).filter(InflationRate.id == record_id).first()
         if record:
             self.db.delete(record)
@@ -113,7 +216,18 @@ class InflationRateRepository:
         return False
 
     def delete_by_year(self, annee: int) -> bool:
-        """Delete inflation rate record for a specific year."""
+        """
+        Delete the inflation rate record for a specific year.
+
+        This method retrieves the record matching the given year and, if found,
+        deletes it and commits the transaction. If no record exists for that year,
+        a warning is logged and False is returned.
+
+        Args:
+            annee: The integer year whose inflation rate record should be deleted.
+        Returns:
+            True if the record was found and deleted, False otherwise.
+        """
         record = self.db.query(InflationRate).filter(InflationRate.annee == annee).first()
         if record:
             self.db.delete(record)
@@ -124,11 +238,30 @@ class InflationRateRepository:
         return False
 
     def count_records(self) -> int:
-        """Get total number of inflation rate records."""
+        """
+        Count the total number of inflation rate records in the database.
+
+        This method issues a COUNT query against the entire InflationRate table
+        without any filtering.
+
+        Returns:
+            The total number of InflationRate records as an integer.
+        """
         return self.db.query(InflationRate).count()
 
     def get_statistics(self) -> dict:
-        """Get statistics about inflation rate data."""
+        """
+        Compute global statistics about the inflation rate dataset.
+
+        This method aggregates several metrics across the entire InflationRate table,
+        including total record count, the earliest and latest years present, and the
+        average, maximum, and minimum inflation rates. All rate values are rounded
+        to four decimal places.
+
+        Returns:
+            A dict containing total_records, min_year, max_year, average_rate,
+            max_rate, and min_rate, with None for any metric where no data is available.
+        """
         total = self.count_records()
         
         min_year_query = self.db.query(InflationRate.annee).order_by(InflationRate.annee).first()

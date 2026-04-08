@@ -80,7 +80,6 @@ def get_training_service(db: Session = Depends(get_db)) -> "TrainingService":
     """Dependency function to get training service instance."""
     return TrainingService(repo=TrainingRepository(db=db))
 
-
 class TrainingService:
     def __init__(self, repo = TrainingRepository):
         self.repo = repo

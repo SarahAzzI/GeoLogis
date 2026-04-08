@@ -11,9 +11,6 @@ from ..model.taxe_fonciere import TaxeFonciere
 
 logger = logging.getLogger(__name__)
 
-# ------------------------------------------------------------------ #
-#  Config - mirrored from api_taxe_foncière.py                       #
-# ------------------------------------------------------------------ #
 BASE_URL = "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets"
 DATASET = "fiscalite-locale-des-particuliers"
 ANNEES = [2021, 2022, 2023, 2024]
@@ -151,7 +148,16 @@ class TaxeFonciereService:
         self.total_fallback = 0
 
     def fetch_record(self, code_insee: str, annee: int) -> Optional[dict]:
-        """Fetch a single record from the API."""
+        """
+        Fetch a single record from the API.
+
+        Args:
+            code_insee: INSEE code of the commune
+            annee: Year of the data to fetch
+
+        Returns:
+            A dictionary with the record data if found, otherwise None
+        """
         url = f"{BASE_URL}/{DATASET}/records"
         params = {
             "where": f"{CODE_FIELD}='{code_insee}' AND {ANNEE_FIELD}='{annee}'",
@@ -170,7 +176,17 @@ class TaxeFonciereService:
     def fetch_with_fallback(
         self, code_insee: str, annee: int
     ) -> tuple[Optional[dict], Optional[int]]:
-        """Fetch record with fallback to nearby years if not found."""
+        """
+        Fetch record with fallback to nearby years if not found.
+        
+        Args:
+            code_insee: INSEE code of the commune
+            annee: Target year of the data to fetch
+
+        Returns:
+            A tuple containing the record data (or None if not found)
+            and the year of the source data (which may be different from the target year if fallback was used)
+        """
         row = self.fetch_record(code_insee, annee)
         if row:
             return row, annee
@@ -192,7 +208,16 @@ class TaxeFonciereService:
         return None, None
 
     def fetch_all_data(self) -> pd.DataFrame:
-        """Fetch all taxe foncière data for all departments and years."""
+        """
+        Fetch all taxe foncière data for all departments and years. 
+
+        This method iterates through all the chefs-lieux and target years, fetching data for each combination.
+        If data for a specific year is not found, it uses the fallback mechanism to try nearby years.
+        The results are collected into a list of records, which is then converted into a DataFrame.
+
+        Returns:
+            A DataFrame containing all the fetched records, or an empty DataFrame if no records were fetched.
+        """
         records = []
         total = len(CHEFS_LIEUX) * len(ANNEES)
         done = 0
@@ -216,7 +241,17 @@ class TaxeFonciereService:
         return pd.DataFrame(records) if records else pd.DataFrame()
 
     def process_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Process and clean the dataframe."""
+        """
+        Process and clean the dataframe.
+        
+        This includes converting numeric columns, reordering columns, and sorting the data. 
+
+        Args:
+            df: Input dataframe to process
+
+        Returns:
+            A cleaned and processed dataframe ready for database insertion       
+        """
         if df.empty:
             return df
 
@@ -242,7 +277,24 @@ class TaxeFonciereService:
         return df
 
     def save_to_database(self, df: pd.DataFrame, table_name: str = "taxe_fonciere") -> bool:
-        """Save dataframe to database using SQLAlchemy ORM."""
+        """
+        Save dataframe to database using SQLAlchemy ORM. 
+
+        This method first checks if the dataframe is empty.
+        
+        If it is not, it proceeds to clear existing records from the target table (if replace is True)
+        and then iterates through the dataframe rows to create ORM objects for each record.
+        
+        These objects are added to the session and committed to the database.
+        If any errors occur during this process, the transaction is rolled back and an error message is logged.
+
+        Args:
+            df: DataFrame containing the records to save
+            table_name: Name of the database table to save to (default is "taxe_fonciere")
+
+        Returns:
+            True if the operation was successful, False otherwise
+        """
         db = SessionLocal()
         try:
             if df.empty:
@@ -299,6 +351,19 @@ class TaxeFonciereService:
         """
         Main orchestration method: fetch, process, and save taxe foncière data.
         Returns a summary of the operation.
+
+        This method performs the following steps:       
+            1. Fetches all data using the fetch_all_data method.
+            2. If no data is fetched, it returns a failure message.
+            3. If data is fetched, it processes the dataframe using the process_dataframe method.
+            4. It counts the number of fallback records.
+            5. It attempts to save the processed data to the database using the save_to_database method.
+            6. It returns a summary of the operation, including success status, number of records fetched,
+                number of records saved, number of fallback records, and duration of the operation.
+        
+        Returns:
+            A dictionary containing the results of the synchronization operation, including success status,
+            messages, counts of records fetched and saved, fallback count, and duration in seconds.
         """
         start_time = datetime.now()
 

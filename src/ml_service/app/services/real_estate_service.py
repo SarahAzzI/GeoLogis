@@ -34,7 +34,20 @@ class RealEstateService:
             return pd.DataFrame()
 
     def validate_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Validate and clean real estate data."""
+        """
+        Validate and clean real estate data.
+
+        This includes:
+        - Dropping rows with missing required fields (code_commune, annee)
+        - Converting data types to correct formats
+        - Filling missing values with defaults if necessary
+
+        Args:
+            df: DataFrame to validate
+        
+        Returns:
+            Cleaned and validated DataFrame
+        """
         required_columns = ["code_commune", "annee", "prix_m2", "surface_reelle_bati", "nb_ventes"]
         
         df = df.dropna(subset=["code_commune", "annee"])
@@ -50,7 +63,19 @@ class RealEstateService:
         return df
 
     def sync_from_csv(self, file_path: Optional[str] = None, replace: bool = False) -> dict:
-        """Sync real estate data from CSV file to database."""
+        """
+        Sync real estate data from CSV file to database.
+
+        This includes loading the data, validating it, and then inserting it into the database.
+        If the replace flag is set, existing data will be cleared before inserting new records.
+
+        Args:
+            file_path: Optional path to the CSV file. If None, defaults to "flatfiles/real_estate_market.csv"
+            replace: Whether to replace existing records in the database
+
+        Returns:
+            Dictionary with sync status and number of records synced        
+        """
         if file_path is None:
             file_path = str(self.data_path / "real_estate_market.csv")
         
@@ -88,7 +113,17 @@ class RealEstateService:
             return {"error": str(e), "records_synced": 0}
 
     def get_price_statistics(self, annee: int) -> dict:
-        """Get price statistics for a year."""
+        """
+        Get price statistics for a year. 
+
+        This calculates the average price per square meter for the specified year.
+
+        Args:
+            annee: Year for which to calculate statistics
+
+        Returns:
+            Dictionary with average price per square meter for the specified year
+        """
         try:
             return self.repo.get_average_price_by_year(annee)
         except Exception as e:
