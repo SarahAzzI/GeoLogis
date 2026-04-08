@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/training", tags=["training"])
 
 # Base data directory
-BASE_DIR = Path(__file__).parent.parent.parent.parent.parent.parent / "data-pipeline" / "merge" / "raw"
+BASE_DIR = Path(__file__).parent.parent.parent.parent.parent.parent / "data_pipeline" / "merge" / "raw"
 
 @router.get("/", description="Get all training data")
 async def get_training_data(db: Session = Depends(get_db)):
@@ -196,10 +196,10 @@ async def load_communes_training_data(db: Session = Depends(get_db)):
 async def load_inflation_training_data(db: Session = Depends(get_db)):
     """Load inflation rate training data from CSV."""
     repo = InflationRateRepository(db=db)
-    csv_file = BASE_DIR / "taux_inflation.csv"
+    csv_file = BASE_DIR.parent.parent.parent.parent / "flatfiles" / "taux_inflation.csv"
     
     if not csv_file.exists():
-        csv_file = BASE_DIR.parent.parent / "flatfiles" / "taux_inflation.csv"
+        csv_file = BASE_DIR.parent.parent.parent / "flatfiles" / "taux_inflation.csv"
     
     if not csv_file.exists():
         logger.error("Inflation rates CSV not found in either location")
@@ -314,14 +314,6 @@ async def get_training_record_count(db: Session = Depends(get_db)):
     service = get_training_service(db)
     count = service.repo.count_records()
     return {"total_records": count}
-
-
-@router.delete("/clear/{annee}")
-async def clear_training_by_year(annee: int, db: Session = Depends(get_db)):
-    """Delete all training records for a specific year."""
-    service = get_training_service(db)
-    count = service.repo.clear_by_year(annee)
-    return {"status": "success", "records_deleted": count}
 
 
 @router.post("/process/split")

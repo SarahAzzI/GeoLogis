@@ -12,7 +12,7 @@ class InflationRateService:
 
     def __init__(self):
         self.repo = InflationRateRepository(db=next(self._get_db()))
-        self.data_path = Path(__file__).parent.parent.parent.parent / "flatfiles"
+        self.data_path = Path(__file__).parent.parent.parent.parent / "flatfiles" / "taux_inflation.csv"
 
     @staticmethod
     def _get_db():
@@ -84,7 +84,7 @@ class InflationRateService:
             Dictionary with sync status and number of records synced
         """
         if file_path is None:
-            file_path = str(self.data_path / "inflation_rates.csv")
+            file_path = str(self.data_path / "taux_inflation.csv")
         
         try:
             # Load and validate
