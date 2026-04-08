@@ -94,6 +94,45 @@ class Pipeline:
     def load_csv(self, csv_path: str, sep=";") -> pd.DataFrame:
         return pd.read_csv(csv_path, sep=sep)
 
+    def load_from_training_table(self, db_session=None) -> pd.DataFrame:
+        """
+        Load training data from the ml_service training table.
+        
+        Args:
+            db_session: SQLAlchemy database session
+            
+        Returns:
+            Dataframe with training data
+        """
+        import sys
+        from pathlib import Path
+        
+        try:
+            # Add ml_service to path
+            ml_service_path = Path(__file__).parent.parent.parent / "ml_service"
+            sys.path.insert(0, str(ml_service_path))
+            
+            from app.repositories.training_repository import TrainingRepository
+            
+            if db_session is None:
+                raise ValueError("Database session is required to load from training table")
+            
+            repo = TrainingRepository(db=db_session)
+            records = repo.get_training_data()
+            
+            # Convert records to dataframe
+            if records:
+                df = pd.DataFrame([record.__dict__ for record in records])
+                # Remove SQLAlchemy internal columns
+                df = df[[col for col in df.columns if not col.startswith('_')]]
+                return df
+            else:
+                raise ValueError("No training data found in database")
+                
+        except Exception as e:
+            print(f"Error loading from training table: {e}")
+            raise
+
     def clean(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
 
@@ -124,7 +163,34 @@ class Pipeline:
 
         return df
 
-
+    def clean_with_processor(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Use the data processor service for advanced cleaning and normalization.
+        
+        Args:
+            df: Input dataframe
+            
+        Returns:
+            Cleaned and normalized dataframe
+        """
+        from transform.cleaning import DataCleaner
+        from transform.normalization import DataNormalizer
+        
+        # Use cleaner
+        cleaner = DataCleaner(drop_columns=self.drop_cols)
+        df = cleaner.clean(df)
+        
+        # Handle missing values
+        df = cleaner.handle_missing_numeric(df, strategy="mean")
+        
+        # Remove duplicates
+        df = cleaner.remove_duplicates(df)
+        
+        # Use normalizer
+        normalizer = DataNormalizer()
+        df = normalizer.normalize(df)
+        
+        return df
     def split(self, df: pd.DataFrame, features, year_col="annee"):
         if year_col not in df.columns:
             raise ValueError(f"Colonne de split '{year_col}' introuvable")

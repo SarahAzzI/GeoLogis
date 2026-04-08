@@ -130,8 +130,82 @@ class TaxeFonciereRepository:
             ]
             self.db.add_all(records)
             self.db.commit()
+            logger.info(f"Bulk inserted {len(records)} taxe foncière records")
             return len(records)
         except Exception as e:
             logger.error(f"Error in create_bulk: {e}", exc_info=True)
             self.db.rollback()
             return 0
+
+    def add_single(self, schema: TaxeFonciereCreateSchema) -> Optional[TaxeFonciere]:
+        """Add a single taxe foncière record."""
+        try:
+            record = TaxeFonciere(**schema.model_dump())
+            self.db.add(record)
+            self.db.commit()
+            self.db.refresh(record)
+            logger.info(f"Added taxe foncière record for {schema.nom_commune}, year {schema.annee_cible}")
+            return record
+        except Exception as e:
+            logger.error(f"Error adding single record: {e}")
+            self.db.rollback()
+            return None
+
+    def update(self, record_id: int, data: dict) -> Optional[TaxeFonciere]:
+        """Update a taxe foncière record."""
+        record = self.db.query(TaxeFonciere).filter(TaxeFonciere.id == record_id).first()
+        if record:
+            for key, value in data.items():
+                if hasattr(record, key):
+                    setattr(record, key, value)
+            self.db.commit()
+            self.db.refresh(record)
+            logger.info(f"Updated taxe foncière record {record_id}")
+        return record
+
+    def delete(self, record_id: int) -> bool:
+        """Delete a taxe foncière record by ID."""
+        record = self.db.query(TaxeFonciere).filter(TaxeFonciere.id == record_id).first()
+        if record:
+            self.db.delete(record)
+            self.db.commit()
+            logger.info(f"Deleted taxe foncière record {record_id}")
+            return True
+        logger.warning(f"Taxe foncière record {record_id} not found")
+        return False
+
+    def delete_by_year(self, annee_cible: int) -> int:
+        """Delete all records for a specific year."""
+        count = self.db.query(TaxeFonciere).filter(TaxeFonciere.annee_cible == annee_cible).delete()
+        self.db.commit()
+        logger.info(f"Deleted {count} taxe foncière records for year {annee_cible}")
+        return count
+
+    def count_records(self) -> int:
+        """Get total number of taxe foncière records."""
+        return self.db.query(TaxeFonciere).count()
+
+    def count_by_year(self, annee_cible: int) -> int:
+        """Get count of records for a specific year."""
+        return self.db.query(TaxeFonciere).filter(TaxeFonciere.annee_cible == annee_cible).count()
+
+    def get_statistics(self) -> dict:
+        """Get statistics about taxe foncière data."""
+        from sqlalchemy import func
+        
+        total = self.count_records()
+        
+        min_year_query = self.db.query(TaxeFonciere.annee_cible).order_by(TaxeFonciere.annee_cible).first()
+        max_year_query = self.db.query(TaxeFonciere.annee_cible).order_by(TaxeFonciere.annee_cible.desc()).first()
+        
+        fallback_count = self.db.query(TaxeFonciere).filter(TaxeFonciere.est_fallback == True).count()
+        
+        return {
+            "total_records": total,
+            "min_year": min_year_query[0] if min_year_query else None,
+            "max_year": max_year_query[0] if max_year_query else None,
+            "unique_communes": self.db.query(TaxeFonciere.insee_com).distinct().count(),
+            "unique_departments": self.db.query(TaxeFonciere.dept).distinct().count(),
+            "unique_years": self.db.query(TaxeFonciere.annee_cible).distinct().count(),
+            "fallback_records": fallback_count
+        }

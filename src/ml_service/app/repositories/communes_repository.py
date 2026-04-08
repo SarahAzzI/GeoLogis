@@ -119,9 +119,79 @@ class CommuneRepository:
             ]
             self.db.add_all(records)
             self.db.commit()
+            logger.info(f"Bulk inserted {len(records)} commune records")
             return len(records)
         except Exception as e:
             logger.error(f"Error in create_bulk: {e}", exc_info=True)
             self.db.rollback()
             return 0
+
+    def add_single(self, schema: CommuneCreateSchema) -> Optional[Commune]:
+        """Add a single commune record."""
+        try:
+            record = Commune(**schema.model_dump())
+            self.db.add(record)
+            self.db.commit()
+            self.db.refresh(record)
+            logger.info(f"Added commune record {schema.code_insee}, year {schema.annee}")
+            return record
+        except Exception as e:
+            logger.error(f"Error adding single record: {e}")
+            self.db.rollback()
+            return None
+
+    def update(self, record_id: int, data: dict) -> Optional[Commune]:
+        """Update a commune record."""
+        record = self.db.query(Commune).filter(Commune.id == record_id).first()
+        if record:
+            for key, value in data.items():
+                if hasattr(record, key):
+                    setattr(record, key, value)
+            self.db.commit()
+            self.db.refresh(record)
+            logger.info(f"Updated commune record {record_id}")
+        return record
+
+    def delete(self, record_id: int) -> bool:
+        """Delete a commune record by ID."""
+        record = self.db.query(Commune).filter(Commune.id == record_id).first()
+        if record:
+            self.db.delete(record)
+            self.db.commit()
+            logger.info(f"Deleted commune record {record_id}")
+            return True
+        logger.warning(f"Commune record {record_id} not found")
+        return False
+
+    def delete_by_year(self, annee: int) -> int:
+        """Delete all records for a specific year."""
+        count = self.db.query(Commune).filter(Commune.annee == annee).delete()
+        self.db.commit()
+        logger.info(f"Deleted {count} commune records for year {annee}")
+        return count
+
+    def count_records(self) -> int:
+        """Get total number of commune records."""
+        return self.db.query(Commune).count()
+
+    def count_by_year(self, annee: int) -> int:
+        """Get count of records for a specific year."""
+        return self.db.query(Commune).filter(Commune.annee == annee).count()
+
+    def get_statistics(self) -> dict:
+        """Get statistics about commune data."""
+        total = self.count_records()
+        
+        min_year_query = self.db.query(Commune.annee).order_by(Commune.annee).first()
+        max_year_query = self.db.query(Commune.annee).order_by(Commune.annee.desc()).first()
+        
+        return {
+            "total_records": total,
+            "min_year": min_year_query[0] if min_year_query else None,
+            "max_year": max_year_query[0] if max_year_query else None,
+            "unique_communes": self.db.query(Commune.code_insee).distinct().count(),
+            "unique_departments": self.db.query(Commune.dep_code).distinct().count(),
+            "unique_regions": self.db.query(Commune.reg_code).distinct().count(),
+            "unique_years": self.db.query(Commune.annee).distinct().count()
+        }
     
