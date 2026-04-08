@@ -2,6 +2,7 @@ import logging
 import mlflow
 import mlflow.sklearn
 from pipeline import Pipeline
+import joblib
 
 import matplotlib
 matplotlib.use("Agg")
@@ -63,6 +64,10 @@ def main(csv_path="../merge/raw/csv_full_post.csv"):
 
         logging.info("Entraînement du modèle")
         pipeline.train(X_train, y_train)
+
+        # Sauvegarder le modèle entraîné
+        joblib.dump(pipeline, 'pipeline_model.joblib')
+        logging.info("Modèle sauvegardé dans pipeline_model.joblib")
 
         logging.info("Évaluation du modèle")
         result = pipeline.evaluate(X_test, y_test)

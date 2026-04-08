@@ -1,10 +1,13 @@
 from django.urls import path
-from .views import predict, get_predictions
+from .views import get_predictions, predict_api, predict
 
 urlpatterns = [
-    # Laisse le chemin vide '' car il sera complété par le fichier principal
-    path('', predict, name='prediction'), 
+    # Route pour la vue web de prédiction
+    path('', predict, name='prediction'),
     
-    # Route pour ton API d'historique si besoin
+    # Route pour l'API de prédiction
+    path('api/', predict_api, name='api_predict'),
+    
+    # Route pour l'historique
     path('history/', get_predictions, name='prediction_history'),
 ]
