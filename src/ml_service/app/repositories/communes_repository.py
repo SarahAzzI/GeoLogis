@@ -18,43 +18,122 @@ class CommuneRepository:
         self.db = db
 
     def get_all(self) -> List[Commune]:
-        """Get all commune records."""
+        """
+        Retrieve all commune records from the database.
+
+        This method queries the database without any filters and returns every
+        commune record available.
+
+        Returns:
+            List of all Commune records in the database.
+        """
         return self.db.query(Commune).all()
 
     def get_by_id(self, record_id: int) -> Optional[Commune]:
-        """Get a record by ID."""
+        """
+        Retrieve a single commune record by its primary key.
+
+        This method filters the Commune table by the given ID and returns
+        the first matching record, or None if no match is found.
+
+        Args:
+            record_id: The integer primary key of the commune record to retrieve.
+        Returns:
+            The matching Commune record, or None if not found.
+        """
         return self.db.query(Commune).filter(Commune.id == record_id).first()
 
     def get_by_insee(self, code_insee: str) -> List[Commune]:
-        """Get all records for a specific INSEE code."""
+        """
+        Retrieve all records for a specific INSEE code, ordered by year descending.
+
+        This method filters the Commune table by the given INSEE code and returns
+        all matching records sorted from the most recent year to the oldest.
+
+        Args:
+            code_insee: The INSEE code string identifying the commune.
+        Returns:
+            List of Commune records matching the INSEE code, ordered by year descending.
+        """
         return self.db.query(Commune).filter(
             Commune.code_insee == code_insee
         ).order_by(Commune.annee.desc()).all()
 
     def get_by_postal_code(self, code_postal: str) -> List[Commune]:
-        """Get all communes for a specific postal code."""
+        """
+        Retrieve all communes matching a specific postal code.
+
+        This method filters the Commune table by the given postal code and returns
+        all matching records regardless of year.
+
+        Args:
+            code_postal: The postal code string to filter communes by.
+        Returns:
+            List of Commune records matching the postal code.
+        """
         return self.db.query(Commune).filter(
             Commune.code_postal == code_postal
         ).all()
 
     def get_by_department(self, dep_code: str) -> List[Commune]:
-        """Get all communes in a department."""
+        """
+        Retrieve all commune records belonging to a specific department.
+
+        This method filters the Commune table by the given department code and
+        returns all matching records across all available years.
+
+        Args:
+            dep_code: The department code string to filter communes by.
+        Returns:
+            List of Commune records belonging to the specified department.
+        """
         return self.db.query(Commune).filter(
             Commune.dep_code == dep_code
         ).all()
 
     def get_by_region(self, reg_code: str) -> List[Commune]:
-        """Get all communes in a region."""
+        """
+        Retrieve all commune records belonging to a specific region.
+
+        This method filters the Commune table by the given region code and
+        returns all matching records across all available years.
+
+        Args:
+            reg_code: The region code string to filter communes by.
+        Returns:
+            List of Commune records belonging to the specified region.
+        """
         return self.db.query(Commune).filter(
             Commune.reg_code == reg_code
         ).all()
 
     def get_by_year(self, annee: int) -> List[Commune]:
-        """Get all communes for a specific year."""
+        """
+        Retrieve all commune records for a specific year.
+
+        This method filters the Commune table by the given year and returns
+        all matching records regardless of geographic criteria.
+
+        Args:
+            annee: The integer year to filter commune records by.
+        Returns:
+            List of Commune records for the specified year.
+        """
         return self.db.query(Commune).filter(Commune.annee == annee).all()
 
     def get_by_insee_and_year(self, code_insee: str, annee: int) -> Optional[Commune]:
-        """Get a specific commune in a specific year."""
+        """
+        Retrieve a single commune record matching both an INSEE code and a year.
+
+        This method applies a compound filter on INSEE code and year, returning
+        the first matching record or None if no match is found.
+
+        Args:
+            code_insee: The INSEE code string identifying the commune.
+            annee: The integer year to match against.
+        Returns:
+            The matching Commune record, or None if not found.
+        """
         return self.db.query(Commune).filter(
             and_(
                 Commune.code_insee == code_insee,
@@ -63,7 +142,19 @@ class CommuneRepository:
         ).first()
 
     def filter_records(self, filters: CommuneFilterSchema) -> List[Commune]:
-        """Filter records based on multiple criteria."""
+        """
+        Filter commune records based on multiple optional criteria.
+
+        This method dynamically builds a query by applying only the filters
+        that are present in the provided schema. Each non-null field in the
+        schema is added as an additional WHERE clause on the query.
+
+        Args:
+            filters: A CommuneFilterSchema instance containing the optional filter fields
+                     (code_insee, code_postal, annee, dep_code, reg_code).
+        Returns:
+            List of Commune records matching all provided filter criteria.
+        """
         query = self.db.query(Commune)
 
         if filters.code_insee:
@@ -80,7 +171,20 @@ class CommuneRepository:
         return query.all()
 
     def get_department_stats(self, dep_code: str, annee: int) -> dict:
-        """Get department statistics for a year."""
+        """
+        Compute aggregate statistics for a department in a given year.
+
+        This method retrieves all commune records for the specified department
+        and year, then calculates summary metrics including record count and
+        average population. If no records are found, an error dict is returned.
+
+        Args:
+            dep_code: The department code string to compute statistics for.
+            annee: The integer year to scope the statistics to.
+        Returns:
+            A dict containing dep_code, annee, count, and avg_population,
+            or a dict with an "error" key if no records are found.
+        """
         records = self.db.query(Commune).filter(
             and_(Commune.dep_code == dep_code, Commune.annee == annee)
         ).all()
@@ -96,7 +200,20 @@ class CommuneRepository:
         }
 
     def create_bulk(self, schemas: List[CommuneCreateSchema]) -> int:
-        """Bulk insert multiple commune records from schemas."""
+        """
+        Bulk insert multiple commune records from a list of schemas.
+
+        This method iterates over the provided schemas to construct Commune ORM
+        objects, safely casting optional fields where present. All records are
+        added to the session in a single batch and committed together.
+        If any error occurs during the process, the transaction is rolled back,
+        an error is logged, and 0 is returned.
+
+        Args:
+            schemas: List of CommuneCreateSchema instances representing the records to insert.
+        Returns:
+            The number of successfully inserted records, or 0 if the operation failed.
+        """
         try:
             records = [
                 Commune(
@@ -127,7 +244,20 @@ class CommuneRepository:
             return 0
 
     def add_single(self, schema: CommuneCreateSchema) -> Optional[Commune]:
-        """Add a single commune record."""
+        """
+        Add a single commune record to the database.
+
+        This method constructs a Commune ORM object from the provided schema,
+        adds it to the session, and commits the transaction. The record is then
+        refreshed to reflect any database-generated values.
+        If any error occurs, the transaction is rolled back, an error is logged,
+        and None is returned.
+
+        Args:
+            schema: A CommuneCreateSchema instance containing the data for the new record.
+        Returns:
+            The newly created and refreshed Commune record, or None if the operation failed.
+        """
         try:
             record = Commune(**schema.model_dump())
             self.db.add(record)
@@ -141,7 +271,20 @@ class CommuneRepository:
             return None
 
     def update(self, record_id: int, data: dict) -> Optional[Commune]:
-        """Update a commune record."""
+        """
+        Update an existing commune record with new field values.
+
+        This method retrieves the record by ID, then iterates over the provided
+        data dictionary to set each valid attribute on the ORM object. The session
+        is committed and the record refreshed after the update.
+        If the record is not found, no changes are made and None is returned.
+
+        Args:
+            record_id: The integer primary key of the commune record to update.
+            data: A dictionary mapping field names to their new values.
+        Returns:
+            The updated and refreshed Commune record, or None if the record was not found.
+        """
         record = self.db.query(Commune).filter(Commune.id == record_id).first()
         if record:
             for key, value in data.items():
@@ -153,7 +296,18 @@ class CommuneRepository:
         return record
 
     def delete(self, record_id: int) -> bool:
-        """Delete a commune record by ID."""
+        """
+        Delete a single commune record by its primary key.
+
+        This method retrieves the record by ID and, if found, deletes it and
+        commits the transaction. If the record does not exist, a warning is
+        logged and False is returned.
+
+        Args:
+            record_id: The integer primary key of the commune record to delete.
+        Returns:
+            True if the record was found and deleted, False otherwise.
+        """
         record = self.db.query(Commune).filter(Commune.id == record_id).first()
         if record:
             self.db.delete(record)
@@ -164,22 +318,59 @@ class CommuneRepository:
         return False
 
     def delete_by_year(self, annee: int) -> int:
-        """Delete all records for a specific year."""
+        """
+        Delete all commune records for a specific year.
+
+        This method issues a bulk delete query filtering by the given year,
+        then commits the transaction and logs the number of deleted records.
+
+        Args:
+            annee: The integer year whose commune records should be deleted.
+        Returns:
+            The number of records deleted.
+        """
         count = self.db.query(Commune).filter(Commune.annee == annee).delete()
         self.db.commit()
         logger.info(f"Deleted {count} commune records for year {annee}")
         return count
 
     def count_records(self) -> int:
-        """Get total number of commune records."""
+        """
+        Count the total number of commune records in the database.
+
+        This method issues a COUNT query against the entire Commune table
+        without any filtering.
+
+        Returns:
+            The total number of Commune records as an integer.
+        """
         return self.db.query(Commune).count()
 
     def count_by_year(self, annee: int) -> int:
-        """Get count of records for a specific year."""
+        """
+        Count the number of commune records for a specific year.
+
+        This method issues a COUNT query filtered by the given year.
+
+        Args:
+            annee: The integer year to count records for.
+        Returns:
+            The number of Commune records for the specified year.
+        """
         return self.db.query(Commune).filter(Commune.annee == annee).count()
 
     def get_statistics(self) -> dict:
-        """Get statistics about commune data."""
+        """
+        Compute global statistics about the commune dataset.
+
+        This method aggregates several metrics across the entire Commune table,
+        including total record count, the earliest and latest years present,
+        and the number of distinct communes, departments, regions, and years.
+
+        Returns:
+            A dict containing total_records, min_year, max_year, unique_communes,
+            unique_departments, unique_regions, and unique_years.
+        """
         total = self.count_records()
         
         min_year_query = self.db.query(Commune.annee).order_by(Commune.annee).first()
@@ -194,4 +385,3 @@ class CommuneRepository:
             "unique_regions": self.db.query(Commune.reg_code).distinct().count(),
             "unique_years": self.db.query(Commune.annee).distinct().count()
         }
-    
