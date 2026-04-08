@@ -1,7 +1,6 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import Prediction
-from .services import fake_prediction
 import folium 
 import requests
 from django.shortcuts import render
@@ -50,6 +49,30 @@ def get_pipeline():
 
     raise RuntimeError('Modèle introuvable, entraînez-le d\'abord avec train.py')
 
+
+def run_prediction(payload):
+    """Run the shared prediction pipeline logic."""
+    pipeline = get_pipeline()
+    df = pd.DataFrame([payload])
+    df = pipeline.clean(df)
+
+    features = [
+        'taux_inflation', 'evolution_ventes', 'evolution_taxe', 'taxe_vs_moyenne_dep',
+        'ventes_moyennes_dep', 'densite', 'ratio_taxe', 'ventes_par_habitant',
+        'taxe_x_population', 'annee', 'dep_code', 'reg_code', 'code_postal',
+        'population', 'superficie_km2', 'zone_emploi', 'taux_global_tfb',
+        'taux_global_tfnb', 'taux_plein_teom', 'taux_global_th', 'nb_ventes'
+    ]
+
+    missing = [c for c in features if c not in df.columns]
+    if missing:
+        raise ValueError(f"Colonnes manquantes: {missing}")
+
+    X = df[features]
+    y_pred = pipeline.predict(X)
+    return y_pred.tolist() if hasattr(y_pred, 'tolist') else [int(y_pred)]
+
+
 @api_view(['POST'])
 def predict_api(request):
     """Endpoint API POST pour prédiction via data-pipeline/Pipeline"""
@@ -64,38 +87,12 @@ def predict_api(request):
     # }
 
     try:
-        pipeline = get_pipeline()
+        result = run_prediction(payload)
+    except ValueError as e:
+        return Response({'error': str(e)}, status=400)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
 
-    df = pd.DataFrame([payload])
-
-    # Clean + features
-    try:
-        df = pipeline.clean(df)
-    except Exception as e:
-        return Response({'error': f'Nettoyage des données impossible: {e}'}, status=400)
-
-    features = [
-        'taux_inflation', 'evolution_ventes', 'evolution_taxe', 'taxe_vs_moyenne_dep',
-        'ventes_moyennes_dep', 'densite', 'ratio_taxe', 'ventes_par_habitant',
-        'taxe_x_population', 'annee', 'dep_code', 'reg_code', 'code_postal',
-        'population', 'superficie_km2', 'zone_emploi', 'taux_global_tfb',
-        'taux_global_tfnb', 'taux_plein_teom', 'taux_global_th', 'nb_ventes'
-    ]
-
-    missing = [c for c in features if c not in df.columns]
-    if missing:
-        return Response({'error': 'Colonnes manquantes', 'missing': missing}, status=400)
-
-    X = df[features]
-
-    try:
-        y_pred = pipeline.predict(X)
-    except Exception as e:
-        return Response({'error': f'Prediction impossible: {e}'}, status=500)
-
-    result = y_pred.tolist() if hasattr(y_pred, 'tolist') else [int(y_pred)]
     return Response({'prediction': result})
 
 
@@ -126,53 +123,35 @@ def predict(request):
                 pop_auto = commune.get('population', 0)
                 lon, lat = commune['centre']['coordinates']
                 
-                # Utiliser le vrai modèle ML au lieu de fake_prediction
+                prediction_data = {
+                    'dep_code': zipcode[:2],  # Extraire le département du code postal
+                    'reg_code': '11',  # Région par défaut (Île-de-France pour Paris)
+                    'code_postal': zipcode,
+                    'taux_inflation': 2.5,  # Valeur par défaut
+                    'annee': 2024,
+                    'population': pop_auto,
+                    'superficie_km2': 50.0,  # Valeur par défaut
+                    'zone_emploi': 1,
+                    'taux_global_tfb': 25.0,  # Valeur par défaut
+                    'taux_global_tfnb': 15.0,  # Valeur par défaut
+                    'taux_plein_teom': 8.0,  # Valeur par défaut
+                    'taux_global_th': 12.0,  # Valeur par défaut
+                    'nb_ventes': 1000,  # Valeur par défaut
+                    'densite': pop_auto / 50.0,  # Calcul simple
+                    'ratio_taxe': 2.1,  # Valeur par défaut
+                    'ventes_par_habitant': 1000 / (pop_auto + 1),
+                    'taxe_x_population': 25.0 * (pop_auto + 1),
+                    'evolution_ventes': 0.05,  # Valeur par défaut
+                    'evolution_taxe': 0.03,  # Valeur par défaut
+                    'taxe_vs_moyenne_dep': 1.1,  # Valeur par défaut
+                    'ventes_moyennes_dep': 800  # Valeur par défaut
+                }
+
                 try:
-                    pipeline = get_pipeline()
-                    
-                    # Préparer les données pour le modèle
-                    prediction_data = {
-                        'dep_code': zipcode[:2],  # Extraire le département du code postal
-                        'reg_code': '11',  # Région par défaut (Île-de-France pour Paris)
-                        'code_postal': zipcode,
-                        'taux_inflation': 2.5,  # Valeur par défaut
-                        'annee': 2024,
-                        'population': pop_auto,
-                        'superficie_km2': 50.0,  # Valeur par défaut
-                        'zone_emploi': 1,
-                        'taux_global_tfb': 25.0,  # Valeur par défaut
-                        'taux_global_tfnb': 15.0,  # Valeur par défaut
-                        'taux_plein_teom': 8.0,  # Valeur par défaut
-                        'taux_global_th': 12.0,  # Valeur par défaut
-                        'nb_ventes': 1000,  # Valeur par défaut
-                        'densite': pop_auto / 50.0,  # Calcul simple
-                        'ratio_taxe': 2.1,  # Valeur par défaut
-                        'ventes_par_habitant': 1000 / (pop_auto + 1),
-                        'taxe_x_population': 25.0 * (pop_auto + 1),
-                        'evolution_ventes': 0.05,  # Valeur par défaut
-                        'evolution_taxe': 0.03,  # Valeur par défaut
-                        'taxe_vs_moyenne_dep': 1.1,  # Valeur par défaut
-                        'ventes_moyennes_dep': 800  # Valeur par défaut
-                    }
-                    
-                    df = pd.DataFrame([prediction_data])
-                    df = pipeline.clean(df)
-                    
-                    features = [
-                        'taux_inflation', 'evolution_ventes', 'evolution_taxe', 'taxe_vs_moyenne_dep',
-                        'ventes_moyennes_dep', 'densite', 'ratio_taxe', 'ventes_par_habitant',
-                        'taxe_x_population', 'annee', 'dep_code', 'reg_code', 'code_postal',
-                        'population', 'superficie_km2', 'zone_emploi', 'taux_global_tfb',
-                        'taux_global_tfnb', 'taux_plein_teom', 'taux_global_th', 'nb_ventes'
-                    ]
-                    
-                    X = df[features]
-                    y_pred = pipeline.predict(X)
-                    result = y_pred.tolist() if hasattr(y_pred, 'tolist') else [int(y_pred)]
-                    
+                    result = run_prediction(prediction_data)
                 except Exception as e:
                     result = f"Erreur prédiction: {str(e)}"
-                
+
                 # Convertir le résultat numérique en texte compréhensible
                 prediction_text = interpret_prediction(result)
                 
