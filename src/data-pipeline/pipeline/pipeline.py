@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import mlflow
 import mlflow.sklearn
@@ -23,6 +24,8 @@ class Pipeline:
         bad_dep_codes=None,
         selected_k=20,
         random_state=42,
+        numeric_cols=None,
+        categorical_cols=None,
     ):
         self.target_col = target_col
         self.drop_cols = drop_cols or ["dep_nom", "reg_nom", "variation"]
@@ -30,35 +33,43 @@ class Pipeline:
         self.selected_k = selected_k
         self.random_state = random_state
 
-        categorical_cols = ["dep_code", "reg_code", "code_postal"]
+        self.categorical_cols = (
+            categorical_cols
+            if categorical_cols is not None
+            else ["dep_code", "reg_code", "code_postal"]
+        )
 
-        numeric_cols = [
-            "taux_inflation",
-            "annee",
-            "population",
-            "superficie_km2",
-            "zone_emploi",
-            "taux_global_tfb",
-            "taux_global_tfnb",
-            "taux_plein_teom",
-            "taux_global_th",
-            "nb_ventes",
-            "densite",
-            "ratio_taxe",
-            "ventes_par_habitant",
-            "taxe_x_population",
-            "evolution_ventes",
-            "evolution_taxe",
-            "taxe_vs_moyenne_dep",
-            "ventes_moyennes_dep",
-        ]
-
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ("num", SimpleImputer(strategy="mean"), numeric_cols),
-                ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_cols),
+        self.numeric_cols = (
+            numeric_cols
+            if numeric_cols is not None
+            else [
+                "annee",
+                "population",
+                "superficie_km2",
+                "zone_emploi",
+                "taux_global_tfb",
+                "taux_global_tfnb",
+                "taux_plein_teom",
+                "taux_global_th",
+                "nb_ventes",
+                "densite",
+                "ratio_taxe",
+                "ventes_par_habitant",
+                "taxe_x_population",
+                "evolution_ventes",
+                "evolution_taxe",
+                "taxe_vs_moyenne_dep",
+                "ventes_moyennes_dep",
             ]
         )
+
+        transformers = []
+        if self.numeric_cols:
+            transformers.append(("num", SimpleImputer(strategy="mean"), self.numeric_cols))
+        if self.categorical_cols:
+            transformers.append(("cat", OneHotEncoder(handle_unknown="ignore", sparse_output=False), self.categorical_cols))
+
+        preprocessor = ColumnTransformer(transformers=transformers, remainder="drop")
 
         self.model = SklearnPipeline(
             [
@@ -74,7 +85,7 @@ class Pipeline:
                         subsample=0.8,
                         colsample_bytree=0.8,
                         eval_metric="mlogloss",
-                        use_label_encoder=False
+                        use_label_encoder=False,
                     ),
                 ),
             ]
@@ -128,11 +139,18 @@ class Pipeline:
 
         return X_train, X_test, y_train, y_test
 
-    def train(self, X_train: pd.DataFrame, y_train: pd.Series):
+    def train(self, X_train, y_train):
+        if isinstance(X_train, np.ndarray):
+            if self.numeric_cols is None:
+                self.numeric_cols = [f"col{i}" for i in range(X_train.shape[1])]
+            X_train = pd.DataFrame(X_train, columns=self.numeric_cols)
+
+        if isinstance(y_train, (list, np.ndarray)):
+            y_train = pd.Series(y_train)
+
         self.label_encoder = LabelEncoder()
-        
         y_train_encoded = self.label_encoder.fit_transform(y_train)
-        
+
         self.model.fit(X_train, y_train_encoded)
         return self
 

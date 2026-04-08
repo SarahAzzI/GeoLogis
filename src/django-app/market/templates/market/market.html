@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}Marché immobilier{% endblock %}
+{% block content %}
+
+<div style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem;">
+    <h2 style="color: #7A5B3E; font-weight: 500; margin-bottom: 0.5rem;">Évolution du marché immobilier</h2>
+
+    <div style="margin-bottom: 1.5rem;">
+        <select onchange="window.location.href='?commune='+this.value"
+                style="padding: 8px 14px; border: 1.5px solid #DDCD9E; border-radius: 8px; font-size: 14px;">
+            {% for commune in communes %}
+            <option>{{ commune }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 2rem;">
+        <div style="background: #faf8f4; border-radius: 8px; padding: 1rem;">
+            <div style="font-size: 12px; color: #888;">Prix / m²</div>
+            <div style="font-size: 22px; font-weight: 500; color: #7A5B3E;">{{ data.prix_m2 }} €</div>
+            <div style="font-size: 12px; color: #3B6D11;">+{{ data.prix_m2_change }}%</div>
+        </div>
+        <div style="background: #faf8f4; border-radius: 8px; padding: 1rem;">
+            <div style="font-size: 12px; color: #888;">Index bâtiment</div>
+            <div style="font-size: 22px; font-weight: 500; color: #7A5B3E;">{{ data.index_batiment }}</div>
+            <div style="font-size: 12px; color: #3B6D11;">+{{ data.index_change }}%</div>
+        </div>
+        <div style="background: #faf8f4; border-radius: 8px; padding: 1rem;">
+            <div style="font-size: 12px; color: #888;">Inflation</div>
+            <div style="font-size: 22px; font-weight: 500; color: #7A5B3E;">{{ data.inflation }}%</div>
+            <div style="font-size: 12px; color: #A32D2D;">{{ data.inflation_change }}%</div>
+        </div>
+        <div style="background: #faf8f4; border-radius: 8px; padding: 1rem;">
+            <div style="font-size: 12px; color: #888;">Taux bancaire</div>
+            <div style="font-size: 22px; font-weight: 500; color: #7A5B3E;">{{ data.taux_bancaire }}%</div>
+            <div style="font-size: 12px; color: #A32D2D;">{{ data.taux_change }}%</div>
+        </div>
+        <div style="background: #faf8f4; border-radius: 8px; padding: 1rem;">
+            <div style="font-size: 12px; color: #888;">Population</div>
+            <div style="font-size: 22px; font-weight: 500; color: #7A5B3E;">{{ data.population|floatformat:0 }}</div>
+            <div style="font-size: 12px; color: #3B6D11;">+{{ data.pop_change }}%</div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;">
+        <div style="border: 1px solid #DDCD9E; border-radius: 12px; padding: 1rem;">
+            <h3 style="font-size: 14px; color: #555; margin-bottom: 0.5rem;">Prix au m²</h3>
+            {{ graph_prix|safe }}
+        </div>
+        <div style="border: 1px solid #DDCD9E; border-radius: 12px; padding: 1rem;">
+            <h3 style="font-size: 14px; color: #555; margin-bottom: 0.5rem;">Inflation & taux bancaire</h3>
+            {{ graph_taux|safe }}
+        </div>
+        <div style="border: 1px solid #DDCD9E; border-radius: 12px; padding: 1rem;">
+            <h3 style="font-size: 14px; color: #555; margin-bottom: 0.5rem;">Index bâtiment</h3>
+            {{ graph_index|safe }}
+        </div>
+        <div style="border: 1px solid #DDCD9E; border-radius: 12px; padding: 1rem;">
+            <h3 style="font-size: 14px; color: #555; margin-bottom: 0.5rem;">Population</h3>
+            {{ graph_pop|safe }}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

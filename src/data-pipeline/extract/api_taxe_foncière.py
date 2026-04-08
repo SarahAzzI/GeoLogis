@@ -2,7 +2,7 @@ import requests
 import pandas as pd
 import time
 import sys
-from ...ml_service.app.model.database import get_db
+from ...ml_service.app.model.database import engine
 
 # ------------------------------------------------------------------ #
 #  Config                                                              #
@@ -253,4 +253,4 @@ if __name__ == "__main__":
             ].to_string(index=False)
         )
 
-    df.to_sql(name="taxe_fonciere", con=get_db(), if_exists="replace", )
+    df.to_sql(name="taxe_fonciere", con=engine, if_exists="replace")
