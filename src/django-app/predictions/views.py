@@ -4,6 +4,7 @@ from .models import Prediction
 import folium 
 import requests
 from django.shortcuts import render
+from django.urls import reverse
 
 import os
 import sys
@@ -148,9 +149,15 @@ def predict(request):
                 }
 
                 try:
-                    result = run_prediction(prediction_data)
-                except Exception as e:
-                    result = f"Erreur prédiction: {str(e)}"
+                    api_url = request.build_absolute_uri(reverse('api_predict'))
+                    api_response = requests.post(api_url, json=prediction_data, timeout=10)
+                    api_response.raise_for_status()
+                    api_data = api_response.json()
+                    result = api_data.get('prediction')
+                except requests.exceptions.RequestException as e:
+                    result = f"Erreur API prédiction: {str(e)}"
+                except ValueError as e:
+                    result = f"Erreur lecture réponse API: {str(e)}"
 
                 # Convertir le résultat numérique en texte compréhensible
                 prediction_text = interpret_prediction(result)
