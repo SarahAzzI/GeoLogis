@@ -20,12 +20,15 @@ class PredictionService:
         self.training_samples = 0
     
     def _load_pipeline_module(self):
-        """Dynamically load the Pipeline class from pipeline.py."""
+        """
+        Dynamically load the Pipeline class from pipeline.py.
+        This allows us to use the data processing and modeling pipeline defined in the data-pipeline module without a direct import,
+        which can help avoid circular dependencies and reduce coupling between modules.
+
+        Returns:
+            The Pipeline class from the pipeline module, or None if it cannot be loaded.
+        """
         try:
-            # Path calculation: 
-            # __file__ = .../src/ml_service/app/services/prediction_service.py
-            # parent (services) -> parent (app) -> parent (ml_service) -> parent (src) -> parent (GeoLogis)
-            # Then navigate to src/data-pipeline/pipeline/pipeline.py
             base_path = Path(__file__).parent.parent.parent.parent.parent
             pipeline_path = base_path / "src" / "data-pipeline" / "pipeline" / "pipeline.py"
             
@@ -44,12 +47,15 @@ class PredictionService:
             return None
     
     def load_training_data_from_csv(self) -> Optional[pd.DataFrame]:
-        """Load training data from CSV file."""
+        """
+        Load training data from CSV file.
+        This is the preferred method for loading training data as it allows us to use a consistent dataset for training and predictions,
+        especially for the 2026 predictions which are based on the latest available data.
+
+        Returns:
+            DataFrame with training data loaded from CSV, or None if the file cannot be loaded.
+        """
         try:
-            # Path calculation:
-            # __file__ = .../src/ml_service/app/services/prediction_service.py
-            # parent (services) -> parent (app) -> parent (ml_service) -> parent (src) -> parent (GeoLogis)
-            # Then navigate to src/data-pipeline/merge/raw/csv_full_post.csv
             base_path = Path(__file__).parent.parent.parent.parent.parent
             csv_path = base_path / "src" / "data-pipeline" / "merge" / "raw" / "csv_full_post.csv"
             
@@ -69,7 +75,18 @@ class PredictionService:
             return None
     
     def load_training_data_from_db(self, db: Session) -> Optional[pd.DataFrame]:
-        """Load and merge training data from database repositories."""
+        """
+        Load and merge training data from database repositories.
+
+        This method attempts to load training data directly from the database, which can be useful for real-time predictions or when the CSV data is outdated.
+        It tries to load from the taxe_fonciere table as it contains the most relevant features for the model. If that fails, it falls back to loading from CSV.
+
+        Args:
+            db: Database session for querying data
+        
+        Returns:
+            DataFrame with training data loaded from the database, or None if it cannot be loaded.
+        """
         try:
             from ..repositories.taxe_fonciere_repository import TaxeFonciereRepository
             
@@ -94,7 +111,16 @@ class PredictionService:
             return None
     
     def train(self, db: Session) -> Tuple[bool, str]:
-        """Train the model using data from CSV."""
+        """
+        Train the model using data from CSV. This method loads the training data, initializes the pipeline, cleans the data, and then trains the model.
+        It also evaluates the model and stores the accuracy. If any step fails, it returns False and an error message.
+
+        Args:
+            db: Database session for loading data if needed
+
+        Returns:
+            Tuple of (success flag, message)        
+        """
         try:
             # Load the Pipeline class
             Pipeline = self._load_pipeline_module()
@@ -168,7 +194,18 @@ class PredictionService:
             return False, msg
     
     def predict(self, input_data: dict) -> Optional[dict]:
-        """Make a prediction on the input data."""
+        """
+        Make a prediction on the input data. This method takes a dictionary of input features, converts it to a DataFrame, and then uses the trained model to make a prediction.
+        It returns a dictionary with the predicted label, confidence (if available), and features used. 
+        
+        If the model is not trained or if there is an error during prediction, it returns None.
+
+        Args:
+            input_data: Dictionary of input features for prediction
+        
+        Returns:
+            Dictionary with prediction results, or None if prediction cannot be made
+        """
         if not self.is_trained or self.model is None:
             logger.error("Model is not trained. Train the model first.")
             return None
@@ -193,7 +230,17 @@ class PredictionService:
             return None
     
     def predict_2026(self, db: Session) -> Optional[dict]:
-        """Make bulk predictions for all communes for year 2026."""
+        """
+        Make bulk predictions for all communes for year 2026.
+        This method loads the latest available data (preferably from CSV), updates the year to 2026,
+        and then makes predictions for each record.
+
+        Args:
+            db: Database session for loading data if needed
+
+        Returns:
+            Dictionary with predictions for 2026, or None if predictions cannot be made
+        """
         if not self.is_trained or self.model is None:
             logger.error("Model is not trained. Train the model first.")
             return None
@@ -280,7 +327,18 @@ class PredictionService:
             return None
     
     def get_predictions_by_postal_code(self, postal_code: str, db: Session) -> Optional[dict]:
-        """Get 2026 predictions filtered by postal code."""
+        """
+        Get 2026 predictions filtered by postal code.
+        This method loads the latest available data, filters it by the specified postal code, updates the year to 2026,
+        and then makes predictions for those records.
+
+        Args:
+            postal_code: Postal code to filter predictions
+            db: Database session for loading data if needed
+        
+        Returns:
+            Dictionary with predictions for the specified postal code, or None if predictions cannot be made
+        """
         if not self.is_trained or self.model is None:
             logger.error("Model is not trained. Train the model first.")
             return None
@@ -393,13 +451,17 @@ class PredictionService:
             logger.error(f"Error getting predictions for postal code {postal_code}: {e}", exc_info=True)
             return None
 
-
 # Global prediction service instance
 _prediction_service: Optional[PredictionService] = None
 
-
 def get_prediction_service() -> PredictionService:
-    """Get or create the global prediction service instance."""
+    """
+    Get or create the global prediction service instance.
+    This function ensures that there is a single instance of the PredictionService that can be shared across the application.
+    
+    Returns:
+        The global PredictionService instance
+    """
     global _prediction_service
     if _prediction_service is None:
         _prediction_service = PredictionService()
