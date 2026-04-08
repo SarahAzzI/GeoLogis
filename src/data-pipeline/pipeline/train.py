@@ -2,6 +2,7 @@ import logging
 import mlflow
 import mlflow.sklearn
 from pipeline import Pipeline
+import joblib
 
 import matplotlib
 matplotlib.use("Agg")
@@ -21,13 +22,13 @@ def main(csv_path="../merge/raw/csv_full_post.csv"):
             target_col="y",
             drop_cols=["dep_nom", "reg_nom", "variation"],
             bad_dep_codes=["2A", "2B"],
-            selected_k=5,
+            selected_k=20,
         )
 
         mlflow.log_param("target_col", "y")
         mlflow.log_param("drop_cols", ["dep_nom", "reg_nom", "variation"])
         mlflow.log_param("bad_dep_codes", ["2A", "2B"])
-        mlflow.log_param("selected_k", 5)
+        mlflow.log_param("selected_k", 20)
 
         logging.info("Chargement des données")
         df = pipeline.load_csv(csv_path)
@@ -36,6 +37,7 @@ def main(csv_path="../merge/raw/csv_full_post.csv"):
         df_clean = pipeline.clean(df)
 
         features = [
+            "taux_inflation",
             "evolution_ventes",
             "evolution_taxe",
             "taxe_vs_moyenne_dep",
@@ -62,6 +64,10 @@ def main(csv_path="../merge/raw/csv_full_post.csv"):
 
         logging.info("Entraînement du modèle")
         pipeline.train(X_train, y_train)
+
+        # Sauvegarder le modèle entraîné
+        joblib.dump(pipeline, 'pipeline_model.joblib')
+        logging.info("Modèle sauvegardé dans pipeline_model.joblib")
 
         logging.info("Évaluation du modèle")
         result = pipeline.evaluate(X_test, y_test)

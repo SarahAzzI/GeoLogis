@@ -29,7 +29,6 @@ urlpatterns = [
     path('api/market/', include('market.urls')),
     path('api/predictions/', include('predictions.urls')),
     path('api/geologis/', include('GeoLogis.urls')),
-    path('api/predictions/', include('predictions.urls')),
 ]
 
 LOGIN_URL = 'login'
