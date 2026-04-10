@@ -134,16 +134,33 @@ class Pipeline:
             raise
 
     def clean(self, df: pd.DataFrame) -> pd.DataFrame:
+
         df = df.copy()
 
+        # Drop colonnes inutiles
         existing_drop = [c for c in self.drop_cols if c in df.columns]
         df = df.drop(columns=existing_drop)
 
+        # Supprimer départements problématiques
         if "dep_code" in df.columns:
             df = df[~df["dep_code"].isin(self.bad_dep_codes)]
 
+        #uniformiser les types AVANT tout
+        for col in self.categorical_cols:
+            if col in df.columns:
+                df[col] = df[col].astype(str)
+
+        # Convertir les numériques proprement
+        for col in self.numeric_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+
+        # Supprimer les NaN après conversion
         df = df.dropna().reset_index(drop=True)
-        # Feature engineering ici
+
+        # =========================
+        # FEATURE ENGINEERING
+        # =========================
 
         df["densite"] = df["population"] / (df["superficie_km2"] + 1)
 
@@ -153,13 +170,16 @@ class Pipeline:
 
         df["taxe_x_population"] = df["taux_global_tfb"] * (df["population"] + 1)
 
-
+        # ⚠️ pct_change crée des NaN → on les gère après
         df["evolution_ventes"] = df.groupby("code_postal")["nb_ventes"].pct_change()
         df["evolution_taxe"] = df.groupby("code_postal")["taux_global_tfb"].pct_change()
 
         df["taxe_vs_moyenne_dep"] = df["taux_global_tfb"] / df.groupby("dep_code")["taux_global_tfb"].transform("mean")
 
         df["ventes_moyennes_dep"] = df.groupby("dep_code")["nb_ventes"].transform("mean")
+
+        # Nettoyage final des NaN générés par le feature engineering
+        df = df.fillna(0)
 
         return df
 

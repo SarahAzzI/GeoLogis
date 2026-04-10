@@ -12,7 +12,7 @@ import joblib
 import pandas as pd
 
 # Permet d'importer le pipeline depuis le dossier data-pipeline
-DATA_PIPELINE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data-pipeline'))
+DATA_PIPELINE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data_pipeline'))
 if DATA_PIPELINE_ROOT not in sys.path:
     sys.path.append(DATA_PIPELINE_ROOT)
 
