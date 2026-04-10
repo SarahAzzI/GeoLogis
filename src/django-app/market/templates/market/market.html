@@ -1,65 +1,157 @@
 {% extends 'base.html' %}
 {% block title %}Marché immobilier{% endblock %}
 {% block content %}
-
 <div style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem;">
-    <h2 style="color: #7A5B3E; font-weight: 500; margin-bottom: 0.5rem;">Évolution du marché immobilier</h2>
 
-    <div style="margin-bottom: 1.5rem;">
-        <select onchange="window.location.href='?commune='+this.value"
-                style="padding: 8px 14px; border: 1.5px solid #DDCD9E; border-radius: 8px; font-size: 14px;">
-            {% for commune in communes %}
-            <option>{{ commune }}</option>
-            {% endfor %}
-        </select>
-    </div>
+  <!-- TITRE -->
+  <h2 style="color: #7A5B3E; font-weight: 500; margin-bottom: 1rem;">
+    Évolution du marché immobilier
+    {% if code_postal %}
+      <span style="font-size: 16px; color: #888;"> — {{ code_postal }}</span>
+    {% endif %}
+  </h2>
 
-    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 2rem;">
-        <div style="background: #faf8f4; border-radius: 8px; padding: 1rem;">
-            <div style="font-size: 12px; color: #888;">Prix / m²</div>
-            <div style="font-size: 22px; font-weight: 500; color: #7A5B3E;">{{ data.prix_m2 }} €</div>
-            <div style="font-size: 12px; color: #3B6D11;">+{{ data.prix_m2_change }}%</div>
-        </div>
-        <div style="background: #faf8f4; border-radius: 8px; padding: 1rem;">
-            <div style="font-size: 12px; color: #888;">Index bâtiment</div>
-            <div style="font-size: 22px; font-weight: 500; color: #7A5B3E;">{{ data.index_batiment }}</div>
-            <div style="font-size: 12px; color: #3B6D11;">+{{ data.index_change }}%</div>
-        </div>
-        <div style="background: #faf8f4; border-radius: 8px; padding: 1rem;">
-            <div style="font-size: 12px; color: #888;">Inflation</div>
-            <div style="font-size: 22px; font-weight: 500; color: #7A5B3E;">{{ data.inflation }}%</div>
-            <div style="font-size: 12px; color: #A32D2D;">{{ data.inflation_change }}%</div>
-        </div>
-        <div style="background: #faf8f4; border-radius: 8px; padding: 1rem;">
-            <div style="font-size: 12px; color: #888;">Taux bancaire</div>
-            <div style="font-size: 22px; font-weight: 500; color: #7A5B3E;">{{ data.taux_bancaire }}%</div>
-            <div style="font-size: 12px; color: #A32D2D;">{{ data.taux_change }}%</div>
-        </div>
-        <div style="background: #faf8f4; border-radius: 8px; padding: 1rem;">
-            <div style="font-size: 12px; color: #888;">Population</div>
-            <div style="font-size: 22px; font-weight: 500; color: #7A5B3E;">{{ data.population|floatformat:0 }}</div>
-            <div style="font-size: 12px; color: #3B6D11;">+{{ data.pop_change }}%</div>
-        </div>
-    </div>
+  <!-- BADGE API -->
+  {% if api_connectee %}
+    <span style="font-size:11px; color:#3B6D11;">● API connectée</span>
+  {% else %}
+    <span style="font-size:11px; color:#A32D2D;">● Données statiques (API hors ligne)</span>
+  {% endif %}
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;">
-        <div style="border: 1px solid #DDCD9E; border-radius: 12px; padding: 1rem;">
-            <h3 style="font-size: 14px; color: #555; margin-bottom: 0.5rem;">Prix au m²</h3>
-            {{ graph_prix|safe }}
-        </div>
-        <div style="border: 1px solid #DDCD9E; border-radius: 12px; padding: 1rem;">
-            <h3 style="font-size: 14px; color: #555; margin-bottom: 0.5rem;">Inflation & taux bancaire</h3>
-            {{ graph_taux|safe }}
-        </div>
-        <div style="border: 1px solid #DDCD9E; border-radius: 12px; padding: 1rem;">
-            <h3 style="font-size: 14px; color: #555; margin-bottom: 0.5rem;">Index bâtiment</h3>
-            {{ graph_index|safe }}
-        </div>
-        <div style="border: 1px solid #DDCD9E; border-radius: 12px; padding: 1rem;">
-            <h3 style="font-size: 14px; color: #555; margin-bottom: 0.5rem;">Population</h3>
-            {{ graph_pop|safe }}
-        </div>
+  <!-- BARRE DE RECHERCHE CODE POSTAL -->
+  <form method="GET" action="" style="display:flex; gap:8px; margin: 1.5rem 0;">
+    <input
+      type="text"
+      name="code_postal"
+      value="{{ code_postal }}"
+      placeholder="Entrez un code postal (ex: 59000)"
+      maxlength="5"
+      style="padding: 10px 16px; border: 1.5px solid #DDCD9E; border-radius: 8px;
+             font-size: 14px; width: 280px; outline: none;"
+    />
+    <button type="submit"
+      style="padding: 10px 20px; background: #7A5B3E; color: white;
+             border: none; border-radius: 8px; font-size: 14px; cursor: pointer;">
+      Rechercher
+    </button>
+    {% if code_postal %}
+    <a href="?"
+      style="padding: 10px 16px; color: #888; font-size: 13px;
+             text-decoration: none; line-height: 2.2;">
+      Réinitialiser
+    </a>
+    {% endif %}
+  </form>
+
+  <!-- COMMUNES TROUVÉES -->
+  {% if communes %}
+  <div style="margin-bottom: 1.5rem; padding: 12px 16px; background: #faf8f4;
+              border-radius: 8px; border: 1px solid #DDCD9E;">
+    <span style="font-size: 13px; color: #555;">
+      <strong>{{ communes|length }} commune{{ communes|length|pluralize }}</strong> trouvée{{ communes|length|pluralize }} :
+      {% for c in communes %}
+        <span style="color: #7A5B3E;">{{ c.nom }}</span>{% if not forloop.last %} · {% endif %}
+      {% endfor %}
+    </span>
+  </div>
+  {% elif code_postal %}
+  <div style="margin-bottom: 1.5rem; padding: 12px 16px; background: #fff5f5;
+              border-radius: 8px; border: 1px solid #f5c6c6; color: #A32D2D; font-size: 13px;">
+    Aucune commune trouvée pour le code postal <strong>{{ code_postal }}</strong>.
+  </div>
+  {% endif %}
+
+  <!-- TAXE FONCIÈRE -->
+  {% if taux_tfb %}
+  <div style="margin-bottom: 1.5rem; padding: 10px 16px; background: #f0f7ee;
+              border-radius: 8px; border: 1px solid #b6d9ac; font-size: 13px; color: #3B6D11;">
+    Taxe foncière bâtie moyenne ({{ code_postal }}) : <strong>{{ taux_tfb }}%</strong>
+  </div>
+  {% endif %}
+
+  <!-- CARDS STATS -->
+  <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 2rem;">
+    <div style="background: #faf8f4; border-radius: 8px; padding: 1rem;">
+      <div style="font-size: 12px; color: #888;">Prix / m²</div>
+      <div style="font-size: 22px; font-weight: 500; color: #7A5B3E;">{{ data.prix_m2 }} €</div>
+      <div style="font-size: 12px; color: {% if data.prix_m2_change >= 0 %}#3B6D11{% else %}#A32D2D{% endif %};">
+        {% if data.prix_m2_change >= 0 %}+{% endif %}{{ data.prix_m2_change }}%
+      </div>
     </div>
+    <div style="background: #faf8f4; border-radius: 8px; padding: 1rem;">
+      <div style="font-size: 12px; color: #888;">Index bâtiment</div>
+      <div style="font-size: 22px; font-weight: 500; color: #7A5B3E;">{{ data.index_batiment }}</div>
+      <div style="font-size: 12px; color: #3B6D11;">+{{ data.index_change }}%</div>
+    </div>
+    <div style="background: #faf8f4; border-radius: 8px; padding: 1rem;">
+      <div style="font-size: 12px; color: #888;">Inflation</div>
+      <div style="font-size: 22px; font-weight: 500; color: #7A5B3E;">{{ data.inflation }}%</div>
+      <div style="font-size: 12px; color: {% if data.inflation_change >= 0 %}#3B6D11{% else %}#A32D2D{% endif %};">
+        {% if data.inflation_change >= 0 %}+{% endif %}{{ data.inflation_change }}%
+      </div>
+    </div>
+    <div style="background: #faf8f4; border-radius: 8px; padding: 1rem;">
+      <div style="font-size: 12px; color: #888;">Taux bancaire</div>
+      <div style="font-size: 22px; font-weight: 500; color: #7A5B3E;">{{ data.taux_bancaire }}%</div>
+      <div style="font-size: 12px; color: #A32D2D;">{{ data.taux_change }}%</div>
+    </div>
+    <div style="background: #faf8f4; border-radius: 8px; padding: 1rem;">
+      <div style="font-size: 12px; color: #888;">Population</div>
+      <div style="font-size: 22px; font-weight: 500; color: #7A5B3E;">{{ data.population|floatformat:0 }}</div>
+      <div style="font-size: 12px; color: #3B6D11;">+{{ data.pop_change }}%</div>
+    </div>
+  </div>
+
+
+  {% if prediction_2026 %}
+<div style="margin-bottom: 2rem; padding: 16px 20px; background: linear-gradient(135deg, #faf8f4, #f0ebe3);
+            border-radius: 12px; border: 1px solid #DDCD9E;">
+  <h3 style="font-size: 14px; color: #7A5B3E; margin-bottom: 12px;">
+    🔮 Prédiction 2026 — {{ code_postal }}
+  </h3>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+    {% if prediction_2026.predicted_price_per_m2 %}
+    <div>
+      <div style="font-size: 11px; color: #888;">Prix m² estimé</div>
+      <div style="font-size: 20px; font-weight: 500; color: #7A5B3E;">
+        {{ prediction_2026.predicted_price_per_m2|floatformat:0 }} €
+      </div>
+    </div>
+    {% endif %}
+    {% if prediction_2026.confidence %}
+    <div>
+      <div style="font-size: 11px; color: #888;">Confiance</div>
+      <div style="font-size: 20px; font-weight: 500; color: #3B6D11;">
+        {{ prediction_2026.confidence }}%
+      </div>
+    </div>
+    {% endif %}
+  </div>
 </div>
+{% endif %}
 
+  <!-- GRAPHIQUES -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;">
+    <div style="border: 1px solid #DDCD9E; border-radius: 12px; padding: 1rem;">
+      <h3 style="font-size: 14px; color: #555; margin-bottom: 0.5rem;">
+        Prix au m²
+        {% if code_postal %}<span style="font-weight:400; color:#888;"> — {{ code_postal }}</span>{% endif %}
+      </h3>
+      {{ graph_prix|safe }}
+    </div>
+    <div style="border: 1px solid #DDCD9E; border-radius: 12px; padding: 1rem;">
+      <h3 style="font-size: 14px; color: #555; margin-bottom: 0.5rem;">Inflation & taux bancaire</h3>
+      {{ graph_taux|safe }}
+    </div>
+    <div style="border: 1px solid #DDCD9E; border-radius: 12px; padding: 1rem;">
+      <h3 style="font-size: 14px; color: #555; margin-bottom: 0.5rem;">Index bâtiment</h3>
+      {{ graph_index|safe }}
+    </div>
+    <div style="border: 1px solid #DDCD9E; border-radius: 12px; padding: 1rem;">
+      <h3 style="font-size: 14px; color: #555; margin-bottom: 0.5rem;">Population</h3>
+      {{ graph_pop|safe }}
+    </div>
+  </div>
+
+</div>
 {% endblock %}
