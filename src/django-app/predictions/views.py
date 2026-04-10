@@ -107,11 +107,7 @@ def predict(request):
         data = request.data
         zipcode = request.data.get("zipcode")
         
-        
-        
-        
-        
-        geo_url = f"https://geo.api.gouv.fr/communes?codePostal={zipcode}&fields=nom,centre,contour,population&format=json&geometry=contour"
+        geo_url = f"https://geo.api.gouv.fr/communes?codePostal={zipcode}&fields=nom,centre,contour,population,nomDepartement,codeDepartement,nomRegion,codeRegion,surface&format=json&geometry=contour"        
         
         try:
             geo_response = requests.get(geo_url)
@@ -122,30 +118,34 @@ def predict(request):
                 nom_commune = commune.get('nom')
                 pop_auto = commune.get('population', 0)
                 lon, lat = commune['centre']['coordinates']
-                
+                code_region = commune.get('codeRegion')
+                surface = commune.get('surface')
+                surface_km2 = (surface or 0) / 100 
+
                 prediction_data = {
-                    'dep_code': zipcode[:2],  # Extraire le département du code postal
-                    'reg_code': '11',  # Région par défaut (Île-de-France pour Paris)
+                    'dep_code': zipcode[:2], 
+                    'reg_code': code_region, 
                     'code_postal': zipcode,
-                    'taux_inflation': 2.5,  # Valeur par défaut
-                    'annee': 2024,
+                    'taux_inflation': 0.007,  
+                    'annee': 2026,
                     'population': pop_auto,
-                    'superficie_km2': 50.0,  # Valeur par défaut
+                    'superficie_km2': surface_km2,  
                     'zone_emploi': 1,
-                    'taux_global_tfb': 25.0,  # Valeur par défaut
-                    'taux_global_tfnb': 15.0,  # Valeur par défaut
-                    'taux_plein_teom': 8.0,  # Valeur par défaut
-                    'taux_global_th': 12.0,  # Valeur par défaut
-                    'nb_ventes': 1000,  # Valeur par défaut
-                    'densite': pop_auto / 50.0,  # Calcul simple
-                    'ratio_taxe': 2.1,  # Valeur par défaut
+                    'taux_global_tfb': 25.0, 
+                    'taux_global_tfnb': 15.0, 
+                    'taux_plein_teom': 8.0,
+                    'taux_global_th': 12.0, 
+                    'nb_ventes': 1000, 
+                    'densite': pop_auto / surface, 
+                    'ratio_taxe': 2.1, 
                     'ventes_par_habitant': 1000 / (pop_auto + 1),
                     'taxe_x_population': 25.0 * (pop_auto + 1),
-                    'evolution_ventes': 0.05,  # Valeur par défaut
-                    'evolution_taxe': 0.03,  # Valeur par défaut
-                    'taxe_vs_moyenne_dep': 1.1,  # Valeur par défaut
-                    'ventes_moyennes_dep': 800  # Valeur par défaut
+                    'evolution_ventes': 0.05, 
+                    'evolution_taxe': 0.03,  
+                    'taxe_vs_moyenne_dep': 1.1,
+                    'ventes_moyennes_dep': 800 
                 }
+
 
                 try:
                     result = run_prediction(prediction_data)
