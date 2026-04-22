@@ -30,7 +30,7 @@ class PredictionService:
         """
         try:
             base_path = Path(__file__).parent.parent.parent.parent.parent
-            pipeline_path = base_path / "src" / "data-pipeline" / "pipeline" / "pipeline.py"
+            pipeline_path = base_path / "src" / "data_pipeline" / "pipeline" / "pipeline.py"
             
             logger.info(f"Loading pipeline module from: {pipeline_path}")
             if not pipeline_path.exists():
@@ -57,7 +57,7 @@ class PredictionService:
         """
         try:
             base_path = Path(__file__).parent.parent.parent.parent.parent
-            csv_path = base_path / "src" / "data-pipeline" / "merge" / "raw" / "csv_full_post.csv"
+            csv_path = base_path / "src" / "data_pipeline" / "merge" / "raw" / "csv_full_post.csv"
             
             logger.info(f"Loading training data from {csv_path}")
             if not csv_path.exists():
