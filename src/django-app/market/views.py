@@ -15,6 +15,7 @@ FASTAPI_BASE_URL = "http://127.0.0.1:8001"
 # Utilitaire
 # ─────────────────────────────────────────
 
+ 
 def fetch_fastapi(path, default=None):
     url = f"{FASTAPI_BASE_URL}{path}"
     logger.warning(f">>> Appel FastAPI : {url}")
