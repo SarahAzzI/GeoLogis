@@ -27,7 +27,7 @@ urlpatterns = [
     path('information/', info_view, name='info_key'),
     path('', include('users.urls')),
     path('api/market/', include('market.urls')),
-    path('api/predictions/', include('predictions.urls')),
+    path('predictions/', include('predictions.urls')),
     path('api/geologis/', include('GeoLogis.urls')),
 ]
 
