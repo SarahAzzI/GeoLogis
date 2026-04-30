@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:15
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - geologis-network
+
+  ml_service:
+    build: ./src/ml_service
+    env_file:
+      - .env
+    expose:
+      - "8001"
+    volumes:
+      - ./src/data_pipeline:/data_pipeline
+    depends_on:
+      - db
+    networks:
+      - geologis-network
+
+  django:
+    build: ./src/django-app
+    env_file:
+      - .env
+    expose:
+      - "8000"
+    volumes:
+      - static_volume:/app/static
+    depends_on:
+      - db
+      - ml_service
+    networks:
+      - geologis-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - static_volume:/app/static
+    depends_on:
+      - django
+      - ml_service
+    networks:
+      - geologis-network
+
+volumes:
+  postgres_data:
+  static_volume:
+
+networks:
+  geologis-network:
+    driver: bridge

@@ -6,10 +6,12 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+import os
 
 logger = logging.getLogger(__name__)
 
-FASTAPI_BASE_URL = "http://127.0.0.1:8001"
+import os
+FASTAPI_BASE_URL = os.getenv("ML_SERVICE_URL", "http://ml_service:8001")
 
 # ─────────────────────────────────────────
 # Utilitaire

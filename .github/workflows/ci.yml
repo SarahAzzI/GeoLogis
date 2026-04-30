@@ -1,0 +1,35 @@
+name: CI/CD GeoLogis
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Django image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./src/django-app
+          push: true
+          tags: ghcr.io/sarahazzi/geologis-django:latest
+
+      - name: Build and push ML Service image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./src/ml_service
+          push: true
+          tags: ghcr.io/sarahazzi/geologis-ml:latest
