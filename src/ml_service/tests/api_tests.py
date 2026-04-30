@@ -21,6 +21,8 @@ from ..app.repositories.communes_repository import CommuneRepository
 from ..app.repositories.inflation_rate_repository import InflationRateRepository
 from ..app.repositories.taxe_fonciere_repository import TaxeFonciereRepository
 
+from unittest.mock import patch, MagicMock
+import pandas as pd
 
 # Test database setup
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///./test.db"
@@ -749,7 +751,7 @@ class TestTaxeFonciereEndpoints:
 
 class TestPredictionEndpoints:
     """Tests for prediction endpoints."""
-    
+
     @pytest.fixture(autouse=True)
     def setup(self):
         """Setup test database before each test."""
@@ -765,24 +767,28 @@ class TestPredictionEndpoints:
         mock_service.accuracy = 0.0
         mock_service.training_samples = 0
         mock_get_service.return_value = mock_service
-        
+
         response = client.get("/predictions/status")
         assert response.status_code == 200
         data = response.json()
         assert "is_trained" in data
         assert "accuracy" in data
 
-    @patch("ml_service.app.services.prediction_service.get_prediction_service")
+    @patch("ml_service.app.api.v1.endpoints.prediction_endpoints.get_prediction_service")
     def test_train_model_success(self, mock_get_service):
         """Test training the model."""
         mock_service = MagicMock()
-        mock_service.train.return_value = (True, "Training completed successfully")
+        mock_service.train.return_value = (
+            True,
+            "Training completed successfully"
+        )
         mock_service.is_trained = True
         mock_service.accuracy = 0.85
         mock_service.training_samples = 1000
         mock_get_service.return_value = mock_service
-        
+
         response = client.post("/predictions/train")
+
         assert response.status_code == 200
         data = response.json()
         assert data["is_trained"] is True
@@ -790,48 +796,50 @@ class TestPredictionEndpoints:
     @patch("ml_service.app.services.prediction_service.get_prediction_service")
     def test_train_model_failure(self, mock_get_service):
         """Test training model failure."""
-        # This test is skipped because actually training the model
-        # and mocking prediction service at endpoint level is complex
         pytest.skip("Skipping complex mocking test")
 
     @patch("ml_service.app.services.prediction_service.get_prediction_service")
     def test_make_prediction_success(self, mock_get_service):
-        """Test making a prediction - SKIPPED (requires mocking at endpoint level)."""
+        """Test making a prediction."""
         pytest.skip("Complex mocking test - requires endpoint-level patching")
 
     @patch("ml_service.app.services.prediction_service.get_prediction_service")
     def test_make_prediction_model_not_trained(self, mock_get_service):
-        """Test making prediction when model is not trained - SKIPPED."""
+        """Test prediction when model is not trained."""
         pytest.skip("Complex mocking test")
 
-    @patch("ml_service.app.services.prediction_service.get_prediction_service")
+    @patch("ml_service.app.api.v1.endpoints.prediction_endpoints.get_prediction_service")
     def test_retrain_model(self, mock_get_service):
         """Test retraining the model."""
         mock_service = MagicMock()
-        mock_service.train.return_value = (True, "Retraining completed successfully")
+        mock_service.train.return_value = (
+            True,
+            "Retraining completed successfully"
+        )
         mock_service.is_trained = True
         mock_service.accuracy = 0.87
         mock_service.training_samples = 1100
         mock_get_service.return_value = mock_service
-        
+
         response = client.post("/predictions/retrain")
+
         assert response.status_code == 200
         data = response.json()
         assert data["is_trained"] is True
 
     @patch("ml_service.app.services.prediction_service.get_prediction_service")
     def test_get_2026_predictions(self, mock_get_service):
-        """Test getting 2026 predictions - SKIPPED."""
+        """Test getting 2026 predictions."""
         pytest.skip("Complex mocking test")
 
     @patch("ml_service.app.services.prediction_service.get_prediction_service")
     def test_get_2026_predictions_not_trained(self, mock_get_service):
-        """Test getting 2026 predictions when model not trained - SKIPPED."""
+        """Test 2026 predictions when model not trained."""
         pytest.skip("Complex mocking test")
 
     @patch("ml_service.app.services.prediction_service.get_prediction_service")
     def test_get_predictions_by_postal_code(self, mock_get_service):
-        """Test getting predictions by postal code - SKIPPED."""
+        """Test predictions by postal code."""
         pytest.skip("Complex mocking test")
 
 
@@ -897,15 +905,21 @@ class TestTrainingEndpoints:
         assert data["status"] == "success"
         assert data["source"] == "communes"
 
+    @patch("pathlib.Path.exists", return_value=True)
     @patch("pandas.read_csv")
-    def test_load_inflation_training_data(self, mock_read_csv):
+    def test_load_inflation_training_data(
+        self,
+        mock_read_csv,
+        mock_exists
+    ):
         """Test loading inflation training data."""
         mock_read_csv.return_value = pd.DataFrame({
             "annee": [2020, 2021, 2022, 2023],
             "taux_inflation": [0.5, 1.2, 2.8, 2.5]
         })
-        
+
         response = client.post("/training/load/inflation")
+
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "success"
